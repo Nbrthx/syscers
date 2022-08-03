@@ -1,10 +1,7 @@
 <script>
-	import Webpeer from "./Webpeer"
-
 	if(!localStorage.getItem("passkey")) location.href = "/profile"
 
-	const client = new Webpeer('wss://syscers-dapp.herokuapp.com')
-
+	var socket = null
 	var createkey = null
 	var jsenc = null
 	var cjs = null
@@ -199,57 +196,60 @@
 	}
 	
 
+	function sio(){
+		socket = io("https://syscers-dapp.herokuapp.com")
 
-	client.on("chat", res => {
-		if(!res.to && !res.data && !res.salt && !res.signature) return
-		else if(res.from == key.pub) return
-		else if(res.to != key.pub) return
+		socket.on("chat", res => {
+			if(!res.to && !res.data && !res.salt && !res.signature) return
+			else if(res.from == key.pub) return
+			else if(res.to != key.pub) return
 
-		var verify = jsenc
-		verify.setPublicKey(compub.ex(res.from))
+			var verify = jsenc
+			verify.setPublicKey(compub.ex(res.from))
 
-		var verified = true
-		for(var i = 0; i < 3; i++) if(!verify.verify(res.data, res.signature[i], cmd5[i])) verified = false
-		if(!verified) return
+			var verified = true
+			for(var i = 0; i < 3; i++) if(!verify.verify(res.data, res.signature[i], cmd5[i])) verified = false
+			if(!verified) return
 
-		var decsalt = ""
+			var decsalt = ""
 
-		var decrypt = jsenc;
-		decrypt.setPrivateKey(key.priv);
-		for(var i = 0; i < 3; i++){
-			if(decrypt.decrypt(res.salt[i]))
-				decsalt += decrypt.decrypt(res.salt[i]);
-		}
+			var decrypt = jsenc;
+			decrypt.setPrivateKey(key.priv);
+			for(var i = 0; i < 3; i++){
+				if(decrypt.decrypt(res.salt[i]))
+					decsalt += decrypt.decrypt(res.salt[i]);
+			}
 
-		if(decsalt.length != 15) return
+			if(decsalt.length != 15) return
 
-		console.log(res)
-		var decmsg = cjs.AES.decrypt(res.data, decsalt).toString(cjs.enc.Utf8)
+			console.log(res)
+			var decmsg = cjs.AES.decrypt(res.data, decsalt).toString(cjs.enc.Utf8)
 
-		if(decmsg == "") return
+			if(decmsg == "") return
 
-		var data = {
-			from: res.from,
-			to: res.to,
-			data: decmsg
-		}
-
-		chats.push(data)
-		chats = chats
-
-		friend()
-
-		if(selected == res.from){
-			var newi = {
-				from: "other",
+			var data = {
+				from: res.from,
+				to: res.to,
 				data: decmsg
 			}
-			comchats.push(newi)
-			comchats = comchats
-		}
 
-		storedb(data)
-	})
+			chats.push(data)
+			chats = chats
+
+			friend()
+
+			if(selected == res.from){
+				var newi = {
+					from: "other",
+					data: decmsg
+				}
+				comchats.push(newi)
+				comchats = comchats
+			}
+
+			storedb(data)
+		})
+	}
 
 	function sent(){
 		if(!selected && !toaddress) return
@@ -292,7 +292,7 @@
 		}
 		console.log(datasent)
 
-		client.emit("chat", datasent)
+		socket.emit("chat", datasent)
 		
 		chats.push(data)
 		chats = chats
@@ -315,6 +315,7 @@
 <svelte:head>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.2.1/jsencrypt.min.js" on:load={load1}></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" on:load={load2}></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.min.js" on:load={sio}></script>
 </svelte:head>
 
 <main>

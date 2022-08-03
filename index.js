@@ -2,17 +2,14 @@ const express = require("express")
 const app = express()
 const http = require('http')
 const server = http.createServer(app)
-const ws = require("ws")
+const { Server } = require("socket.io");
+const io = new Server(server);
 
 const port = process.env.PORT || 3000
 
-const wss = new ws.Server({ noServer: true })
-
-wss.on('connection', socket => {
-    socket.on('message', message => {
-        wss.clients.forEach(client => {
-            client.send(message.toString())
-        })
+io.on('connection', socket => {
+    socket.on('chat', message => {
+        io.emit('chat', message)
     })
 })
 
@@ -23,9 +20,3 @@ app.get("*", (req, res) => {
 })
 
 server.listen(port, () => console.log("Listen on "+port))
-
-server.on('upgrade', (request, socket, head) => {
-    wss.handleUpgrade(request, socket, head, socket => {
-        wss.emit('connection', socket, request)
-    })
-})
