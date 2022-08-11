@@ -1,5 +1,5 @@
 <script>
-	if(!localStorage.getItem("passkey")) location.href = "/profile"
+	if(!localStorage.getItem("secretkey")) location.href = "/profile"
 
 	var socket = null
 	var createkey = null
@@ -8,13 +8,16 @@
 
 	const cmd5 = [
 		(text) => {
-			return cjs.SHA1(text).toString().substring(0,14)
+			return cjs.SHA1(text).toString().substring(0,10)
 		},
 		(text) => {
-			return cjs.SHA1(text).toString().substring(14,28)
+			return cjs.SHA1(text).toString().substring(10,20)
 		},
 		(text) => {
-			return cjs.SHA1(text).toString().substring(28,40)
+			return cjs.SHA1(text).toString().substring(20,30)
+		},
+		(text) => {
+			return cjs.SHA1(text).toString().substring(30,40)
 		}
 	]
 
@@ -23,7 +26,7 @@
 	var msg = ""
 
 	var toaddress = ""
-	var passkey = ""
+	var secretkey = ""
 	var key = {}
 
 	var menushow = "hide"
@@ -108,9 +111,9 @@
 		createkey = new JSEncrypt({ default_key_size: 144 })
 		jsenc = new JSEncrypt()
 
-		passkey = window.localStorage.getItem("passkey")
+		secretkey = window.localStorage.getItem("secretkey")
 
-		key = stringtokey(passkey)
+		key = stringtokey(secretkey)
 		console.log(key)
 
 		var check = setInterval(() => {
@@ -126,13 +129,12 @@
 
 
 	function stringtokey(stringkey){
-		var str = ""
-		try{ str = window.atob(stringkey) }
-		catch{ return }
+		var getpub = jsenc
+		getpub.setPrivateKey(stringkey)
 		
 		return {
-			pub: str.split("@")[0],
-			priv: str.split("@")[1]
+			pub: compub.co(getpub.getPublicKey().substr(27,64)),
+			priv: stringkey
 		}
 	}
 
@@ -197,7 +199,7 @@
 	
 
 	function sio(){
-		socket = io("https://syscers-dapp.herokuapp.com")
+		socket = io()
 
 		socket.on("chat", res => {
 			if(!res.to && !res.data && !res.salt && !res.signature) return
@@ -208,7 +210,7 @@
 			verify.setPublicKey(compub.ex(res.from))
 
 			var verified = true
-			for(var i = 0; i < 3; i++) if(!verify.verify(res.data, res.signature[i], cmd5[i])) verified = false
+			for(var i = 0; i < 4; i++) if(!verify.verify(res.data, res.signature[i], cmd5[i])) verified = false
 			if(!verified) return
 
 			var decsalt = ""
@@ -276,7 +278,7 @@
 		sign.setPrivateKey(key.priv);
 		var signature = []
 		
-		for(var i = 0; i < 3; i++) signature.push(sign.sign(encmsg, cmd5[i]))
+		for(var i = 0; i < 4; i++) signature.push(sign.sign(encmsg, cmd5[i]))
 
 		var data = {
 			from: key.pub,
