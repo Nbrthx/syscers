@@ -1,20 +1,22 @@
 <script>
     var createkey = null
+    var jsenc = null
 
-    var passkey = {
-        pub: "",
-        priv: ""
-    }
-
-    var stringkey = localStorage.getItem("passkey") || ""
+    var secretkey = localStorage.getItem("secretkey") || ""
+    var pubkey = ""
     var textkey = ""
 
     // "NDBUQUltWERZZ0YwUUNoRGdwbGxZS3ZYU1VJZXcwQE1Ha0NBUUFDRXdDSmx3MklCZEVBb1E0S1paV0NyMTBsQ0hzQ0F3RUFBUUlTWW5HMG1jMW5sQ2FtM1pOektNQmEKSThSUkFnb0E1NzZuNHNZUHpndTVBZ29BbC8yZ1JMRVV3ZGZUQWdrRC9EUlk0djBNbHdrQ0NIRmx5UzEyOFFXdgpBZ2toQ2lIa1liSXhMRlk9Ci0tLQ=="
     
     function load(){
-		createkey = new JSEncrypt({ default_key_size: 144 })
+	createkey = new JSEncrypt({ default_key_size: 144 })
+	jsenc = new JSEncrypt()
 
-        if(stringkey) passkey = stringtokey(stringkey)
+	if(secretkey){
+	    var getpub = jsenc
+	    getpub.setPrivateKey(secretkey)
+	    pubkey = compubco(getpub.getPublicKey().substr(27,64))
+	}
     }
 
     const compubco = (pub) => {
@@ -38,45 +40,31 @@
         return newpub
     }
 
-    function stringtokey(stringkey){
-		var str = ""
-		try{ str = window.atob(stringkey) }
-		catch{ return }
-		
-		return {
-			pub: str.split("@")[0],
-			priv: str.split("@")[1]
-		}
-	}
-
     function submit(){
-        var keyparse = stringtokey(textkey)
-        if(keyparse){
-            if(!keyparse.pub && !keyparse.priv) return
-            else if(keyparse.pub.length != 30 && keyparse.priv.length != 150) return
-            else{
-                localStorage.setItem("passkey", stringkey)
-                passkey = keyparse
-            }
+        if(textkey !== "" || textkey !== null){
+	    var getpub = jsenc
+	    getpub.setPrivateKey(textkey)
+	    if(getpub.getPublicKey())
+		secretkey = textkey
+		pubkey = compubco(getpub.getPublicKey().substr(27,64))
+            	localStorage.setItem("secretkey", textkey)
         }
     } 
 
     function makekey(){
-        stringkey = generatestring()
-        passkey = stringtokey(stringkey)
-        localStorage.setItem("passkey", stringkey)
+	if(secretkey !== "") return
+        secretkey = generatestring()
+
+	var getpub = jsenc
+	getpub.setPrivateKey(secretkey)
+	pubkey = compubco(getpub.getPublicKey().substr(27,64))
+
+        localStorage.setItem("secretkey", generatestring())
     }
 
     function generatestring(){
-        var inkey = {
-            pub: createkey.getPublicKey(),
-            priv: createkey.getPrivateKey()
-        };
-        console.log(inkey)
-
-        var newpub = compubco(inkey.pub.substr(27, 64))
-
-        return window.btoa(newpub+"@"+decodeURIComponent(inkey.priv.substr(32, 150)))
+	if(createkey == null) return false
+        return createkey.getPrivateKey().substr(32, 150)
     }
 </script>
 <svelte:head>
@@ -94,16 +82,14 @@
 		</div>
 	</div>
     <h2>Your Address</h2>
-    String key:<br>
-    <input type="text" value={stringkey} disabled><br>
     Public key:<br>
-    <input type="text" value={passkey.pub} disabled><br>
+    <input type="text" value={pubkey} disabled><br>
     Private key:<br>
-    <input type="text" value={passkey.priv} disabled><br>
+    <input type="text" value={secretkey} disabled><br>
     <h2>New in Here?</h2>
     <button on:click={makekey}>Create Key</button><br>
     Or<br>
-    <input type="text" bind:value={textkey} placeholder="put string key"><br>
+    <input type="text" bind:value={textkey} placeholder="put private key"><br>
     <button on:click={submit}>Submit</button><br>
     <br>
     And then click triangle button on top right
