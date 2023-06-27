@@ -9,13 +9,18 @@ function Home(){
   
   let msg = ""
   let username = ""
+  let contact = ""
+  let popup = false
   
   m.request({
     method: "post",
     url: "/api?get-account",
     body: { pub: localStorage.getItem("pub") }
   }).then(data => {
-    if(!data) m.route.set("/account")
+    if(!data){
+      m.route.set("/account")
+      return
+    }
     else{
       username = data.username
     }
@@ -64,14 +69,33 @@ function Home(){
 	  
 	  m.redraw()
 	}
+
+  function mapping(){
+    return chats.map(x => m("p", x.from+": "+x.msg))
+  }
+
+  function popups(){
+    popup = popup?false:true
+  }
   
   return {
     view: () => m("div", [
       m("div", {}, [
-        m("div", chats.map(x => m("p", x.from+": "+x.msg)))
+        m("div.content", mapping())
       ]),
       m("div.ui", [
-        m("button", { onclick: logout }, "Logout"),
+        m("div.header", [
+          m("button", { onclick: logout }, "Logout"),
+          m("button.change", { onclick: popups }, "New"),
+          m("div.persons", { id: popup?"show":"hide" } , [
+            m("input.contact", {
+              type: "text",
+              value: contact,
+              oninput: e => contact = e.target.value,
+              placeholder: "New Contact"
+            })
+          ])
+        ]),
         m("div.navbar", [
           m("textarea.text-chat", {
             resize: "disabled",

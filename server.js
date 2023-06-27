@@ -111,7 +111,12 @@ app.use(async ctx => {
   }
 })
 
+const onlines = {}
+
 io.on("connection", socket => {
+  socket.on("online", data => {
+    onlines[data[0]] = data[1]
+  })
   socket.on("chat", data => {
     io.sockets.emit("chat", data)
   })
