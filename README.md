@@ -1,3 +1,2 @@
-# decentralized chat app
-
-simple chat app
+# battle-syscers
+Sosial media app for contest
