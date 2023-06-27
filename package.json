@@ -1,23 +1,37 @@
 {
-  "name": "svelte-app",
+  "name": "routapp",
   "version": "1.0.0",
-  "private": true,
+  "description": "Contest App",
+  "main": "server.js",
   "scripts": {
-    "build": "rollup -c",
-    "dev": "rollup -c -w",
-    "start": "node index.js"
+    "dev": "rollup src/main.js --file public/bundle.js",
+    "build": "rollup src/main.js --file public/bundle.js --format iife",
+    "start": "node server.js"
   },
-  "devDependencies": {
-    "@rollup/plugin-commonjs": "^17.0.0",
-    "@rollup/plugin-node-resolve": "^11.0.0",
-    "rollup": "^2.3.4",
-    "rollup-plugin-css-only": "^3.1.0",
-    "rollup-plugin-svelte": "^7.0.0",
-    "rollup-plugin-terser": "^7.0.0",
-    "svelte": "^3.48.0"
+  "author": "Niberthix",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": ""
   },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": "",
+  "keywords": [
+    "koa",
+    "server",
+    "mithril"
+  ],
   "dependencies": {
-    "express": "^4.17.3",
-    "socket.io": "^4.5.1"
+    "elliptic": "^6.5.4",
+    "js-sha256": "^0.9.0",
+    "koa": "^2.14.2",
+    "koa-bodyparser": "^4.4.0",
+    "koa-send": "^5.0.1",
+    "koa-static": "^5.0.0",
+    "mysql": "^2.18.1",
+    "rollup": "^3.25.1",
+    "socket.io": "^4.6.1"
   }
 }
