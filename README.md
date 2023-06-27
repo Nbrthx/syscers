@@ -1,2 +1,2 @@
-# battle-syscers
-Sosial media app for contest
+# syscers
+Secure and private social media
