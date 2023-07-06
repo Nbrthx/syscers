@@ -1,5 +1,6 @@
+import m from "../lib/mithril.min.js"
 import { getPasscolor, readPasscolor, downloadImg } from "../lib/passcolor.js"
-import "../lib/elliptic.min.js"
+import { ec as EC } from  "../lib/elliptic.min.js"
 import { randpp, resize } from "../lib/randpp.js"
 
 function Account(){
@@ -8,7 +9,6 @@ function Account(){
   const file = document.createElement("input")
   file.type = "file"
   
-  const EC = elliptic.ec
   const ec = new EC("secp256k1")
   
   var photo = randpp()

@@ -72,7 +72,6 @@ app.use(async ctx => {
       }else ctx.body = false
     }
     else if(api == "account"){
-      console.log(data)
       if(!auth(data)) return
       var val = data.data
       if(val.username == "") return
@@ -112,13 +111,45 @@ app.use(async ctx => {
 })
 
 const onlines = {}
+const pending = {}
 
 io.on("connection", socket => {
-  socket.on("online", data => {
-    onlines[data[0]] = data[1]
+  socket.on("online", (data, callback) => {
+    onlines[data] = socket.id
+
+    if(pending[data] && Array.isArray(pending[data])){
+      socket.emit("chat", pending[data], () => {
+        pending[data].forEach(x => io.to(x.from).emit("received", x.id))
+      })
+      delete pending[data]
+    }
+
+    callback()
   })
-  socket.on("chat", data => {
-    io.sockets.emit("chat", data)
+  socket.on("chat", (data, callback) => {
+    console.log(data)
+    callback()
+    
+    if(!onlines[data.to]){
+      if(!pending[data.to]) pending[data.to] = new Array()
+      pending[data.to].push({
+        from: data.from,
+        msg: data.msg,
+        id: data.id
+      })
+      return
+    }
+    
+    io.to(onlines[data.to]).emit("chat", {
+      from: data.from,
+      msg: data.msg,
+      id: data.id
+    }, () => socket.emit("received", data.id))
+  })
+  
+  socket.on("disconnect", reason => {
+    const username = Object.keys(onlines).find(key => onlines[key] === socket.id)
+    delete onlines[username]
   })
 })
 

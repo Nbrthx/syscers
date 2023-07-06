@@ -1,5 +1,6 @@
+import m from "../lib/mithril.min.js"
 import { socket } from "../socket.js"
-import { dbset, dbget, update } from "../lib/idb-keyval.min.js"
+import { dbset, dbget, clear } from "../lib/idb-keyval.min.js"
 
 function Home(){
   if(!localStorage.getItem("priv")){
@@ -10,7 +11,10 @@ function Home(){
   let msg = ""
   let username = ""
   let contact = ""
-  let popup = false
+  let popup = true
+
+  let chats = []
+  let pending = []
   
   m.request({
     method: "post",
@@ -23,34 +27,36 @@ function Home(){
     }
     else{
       username = data.username
+      socket.emit("online", username, () => "nothing")
     }
   })
-  
-  function newEnterHandler(callback) {
-    let countEnter = 0;
-    return event => {
-      const newCount = (event.target.value.match(/\n/g) || []).length;
-      if (countEnter < newCount) callback(event);
-      countEnter = newCount;
-    }
-  }
-
   
   function logout(){
     localStorage.removeItem("priv")
     localStorage.removeItem("pub")
     m.route.set("/login")
   }
-  
-  let chats = []
+
   dbget("some").then(val => {
     if(val) chats = val
     m.redraw()
   })
 	
-	socket.on("chat", data => {
-	  if(data.from == username) return
-	  chats.push({ from: data.from, msg: data.msg })
+	socket.on("chat", (data, callback) => {
+    if(Array.isArray(data)){
+      data.forEach(x => {
+        if(x.from == username) return
+        chats.push({
+          from: x.from,
+          msg: x.msg
+        })
+      })
+      callback()
+    }else{
+      if(data.from == username) return
+	    chats.push({ from: data.from, msg: data.msg })
+      callback()
+    }
 	  
 	  dbset("some", chats)
 	  
@@ -58,24 +64,64 @@ function Home(){
 	})
 	
 	function send(){
-	  socket.emit("chat", {
+	  pending.push({
+      id: chats.length,
 	    from: username,
+      to: contact,
 	    msg: msg
-	  })
-	  chats.push({ from: "you", msg: msg })
-	  msg = ""
-	  
-	  dbset("some", chats)
-	  
+    })
+	  chats.push({ from: "you", msg: msg, stats: 0 })
+    
+	  socket.emit("chat", {
+      id: chats.length-1,
+	    from: username,
+      to: contact,
+	    msg: msg
+	  }, () => {
+      pending.shift()
+      chats[chats.length-1].stats = 1
+      
+      dbset("some", chats)
+      
+      m.redraw()
+    })
+
+    msg = ""
 	  m.redraw()
 	}
 
+  socket.on("reconnect", () => socket.emit("online", username, () => {
+
+    if(!pending[0]) return
+
+    pending.forEach(x => {
+      socket.emit("chat", x)
+    })
+    pending = []
+  }))
+
+  socket.on("received", data => {
+    if(Array.isArray(data)){
+      data.forEach(x => {
+        chats[x].stats = 2
+      })
+    }else chats[data].stats = 2
+
+    dbset("some", chats)
+
+    m.redraw()
+  })
+
   function mapping(){
-    return chats.map(x => m("p", x.from+": "+x.msg))
+    return chats.map(x => {
+      if(x.stats || x.stats === 0) return m("p", [x.from, ": ", x.msg, m("b", "("+x.stats+")")])
+      return m("p", [x.from, ": ", x.msg])
+    })
   }
 
   function popups(){
-    popup = popup?false:true
+    if(contact == "") popup = true
+    else popup = popup?false:true
   }
   
   return {
@@ -87,6 +133,7 @@ function Home(){
         m("div.header", [
           m("button", { onclick: logout }, "Logout"),
           m("button.change", { onclick: popups }, "New"),
+          m("button", { onclick: () => clear() }, "Clear"),
           m("div.persons", { id: popup?"show":"hide" } , [
             m("input.contact", {
               type: "text",
@@ -98,7 +145,6 @@ function Home(){
         ]),
         m("div.navbar", [
           m("textarea.text-chat", {
-            resize: "disabled",
             value: msg,
             oninput: e => msg = e.target.value
           }),

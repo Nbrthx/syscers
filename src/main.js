@@ -1,4 +1,4 @@
-import "./lib/mithril.min.js"
+import m from "./lib/mithril.min.js"
 import Login from "./views/Login.js"
 import Register from "./views/Register.js"
 import Dashboard from "./views/Home.js"

@@ -1,10 +1,10 @@
-import { getPasscolor, readPasscolor, downloadImg } from "../lib/passcolor.js"
-import "../lib/elliptic.min.js"
+import m from "../lib/mithril.min.js"
+import { getPasscolor, downloadImg } from "../lib/passcolor.js"
+import { ec as EC } from  "../lib/elliptic.min.js"
 
 function Register(){
   if(localStorage.getItem("priv")) m.route.set("/")
   
-  const EC = elliptic.ec
   const ec = new EC("secp256k1")
   
   let warn = ""

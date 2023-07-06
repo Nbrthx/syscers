@@ -1,5 +1,6 @@
-import { getPasscolor, readPasscolor, downloadImg } from "../lib/passcolor.js"
-import "../lib/elliptic.min.js"
+import m from "../lib/mithril.min.js"
+import { readPasscolor } from "../lib/passcolor.js"
+import { ec as EC } from  "../lib/elliptic.min.js"
 
 function Login(){
   if(localStorage.getItem("priv")) m.route.set("/")
@@ -7,7 +8,6 @@ function Login(){
   const file = document.createElement("input")
   file.type = "file"
   
-  const EC = elliptic.ec
   const ec = new EC("secp256k1")
   
   let warn = ""
@@ -23,21 +23,21 @@ function Login(){
       hash: signature,
       time: time
     }
+    
     m.request({
       method: "post",
       url: "/api?login",
       body: data
     }).then(data => {
       if(data){
+        localStorage.setItem("priv",r)
+        localStorage.setItem("pub",pub)
         m.route.set("/")
       }else{
         warn = "Passcode not valid"
         disable = false
       }
     })
-
-    localStorage.setItem("priv",r)
-    localStorage.setItem("pub",pub)
     
     disable = true
   })
