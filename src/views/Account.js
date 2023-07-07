@@ -1,11 +1,8 @@
 import m from "../lib/mithril.min.js"
-import { getPasscolor, readPasscolor, downloadImg } from "../lib/passcolor.js"
 import { ec as EC } from  "../lib/elliptic.min.js"
 import { randpp, resize } from "../lib/randpp.js"
 
 function Account(){
-  if(!localStorage.getItem("priv")) m.route.set("/login")
-  
   const file = document.createElement("input")
   file.type = "file"
   
@@ -83,6 +80,9 @@ function Account(){
   
   const br = m("br")
   return {
+    oninit: () => {
+      if(!localStorage.getItem("priv")) m.route.set("/login")
+    },
     view: () => m("div.card", [
       m("img", { src: pp, onclick: () => file.click(), class: "pp" }),
       m("label", "Username"), br,

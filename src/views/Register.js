@@ -3,8 +3,6 @@ import { getPasscolor, downloadImg } from "../lib/passcolor.js"
 import { ec as EC } from  "../lib/elliptic.min.js"
 
 function Register(){
-  if(localStorage.getItem("priv")) m.route.set("/")
-  
   const ec = new EC("secp256k1")
   
   let warn = ""
@@ -19,6 +17,9 @@ function Register(){
   }
   
   return {
+    oninit: () => {
+      if(localStorage.getItem("priv")) m.route.set("/")
+    },
     view: () => m("div.card", [
       m("h1", "Register"),
       m("button.btn", {

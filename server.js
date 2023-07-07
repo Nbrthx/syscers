@@ -120,8 +120,8 @@ io.on("connection", socket => {
     if(pending[data] && Array.isArray(pending[data])){
       socket.emit("chat", pending[data], () => {
         pending[data].forEach(x => io.to(x.from).emit("received", x.id))
+        delete pending[data]
       })
-      delete pending[data]
     }
 
     callback()

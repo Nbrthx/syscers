@@ -3,8 +3,6 @@ import { readPasscolor } from "../lib/passcolor.js"
 import { ec as EC } from  "../lib/elliptic.min.js"
 
 function Login(){
-  if(localStorage.getItem("priv")) m.route.set("/")
-  
   const file = document.createElement("input")
   file.type = "file"
   
@@ -43,6 +41,9 @@ function Login(){
   })
   
   return {
+    oninit: () => {
+      if(localStorage.getItem("priv")) m.route.set("/")
+    },
     view: () => m("div.card", [
       m("h1", "Login"),
       m("button.btn", {
