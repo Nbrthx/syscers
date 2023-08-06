@@ -119,7 +119,10 @@ io.on("connection", socket => {
 
     if(pending[data] && Array.isArray(pending[data])){
       socket.emit("chat", pending[data], () => {
-        pending[data].forEach(x => io.to(x.from).emit("received", x.id))
+        pending[data].forEach(x => io.to(x.from).emit("received", {
+          id: x.id,
+          from: x.from
+        }))
         delete pending[data]
       })
     }
@@ -127,7 +130,6 @@ io.on("connection", socket => {
     callback()
   })
   socket.on("chat", (data, callback) => {
-    console.log(data)
     callback()
     
     if(!onlines[data.to]){
@@ -143,8 +145,10 @@ io.on("connection", socket => {
     io.to(onlines[data.to]).emit("chat", {
       from: data.from,
       msg: data.msg,
-      id: data.id
-    }, () => socket.emit("received", data.id))
+    }, () => socket.emit("received", {
+      id: data.id,
+      to: data.to
+    }))
   })
   
   socket.on("disconnect", reason => {
@@ -155,4 +159,4 @@ io.on("connection", socket => {
 
 server.listen(port, () => {
   console.log("listening on *:",port);
-});
+})

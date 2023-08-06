@@ -2,58 +2,70 @@ import m from "../lib/mithril.min.js"
 import { socket } from "../socket.js"
 import { dbset, dbget, clear } from "../lib/idb-keyval.min.js"
 
-const Home = {
-  vm: {
-    msg: "",
-    username: "",
-    contact: "",
-    popup: true,
-    chats: [],
-    pending: [],
-    send: () => {
-      Home.vm.pending.push({
-        id: Home.vm.chats.length,
-        from: Home.vm.username,
-        to: Home.vm.contact,
-        msg: Home.vm.msg
-      })
-      Home.vm.chats.push({ from: "you", msg: Home.vm.msg, stats: 0 })
-      
-      socket.emit("chat", {
-        id: Home.vm.chats.length-1,
-        from: Home.vm.username,
-        to: Home.vm.contact,
-        msg: Home.vm.msg
-      }, () => {
-        Home.vm.pending.shift()
-        Home.vm.chats[Home.vm.chats.length-1].stats = 1
-        
-        dbset("some", Home.vm.chats)
-        
-        m.redraw()
-      })
-  
-      Home.vm.msg = ""
-    },
-    popups: () => {
-      if(Home.vm.contact == "") Home.vm.popup = true
-      else Home.vm.popup = Home.vm.popup?false:true
-    },
-    mapping: () => {
-      return Home.vm.chats.map(x => {
-        if(x.stats || x.stats === 0) return m("p", [x.from, ": ", x.msg, m("b", "("+x.stats+")")])
-        return m("p", [x.from, ": ", x.msg])
-      })
-    },
-    logout: () => {
-      localStorage.removeItem("priv")
-      localStorage.removeItem("pub")
-      m.route.set("/login")
+const App = {
+  msg: "",
+  username: "",
+  contact: "",
+  popup: true,
+  chats: {},
+  pending: [],
+  send: () => {
+    const data = {
+      id: 0,
+      from: App.username,
+      to: App.contact,
+      msg: App.msg
     }
+    
+    if(!Array.isArray(App.chats[data.to])) App.chats[data.to] = []
+    
+    data.id = App.chats[data.to].length
+    App.chats[data.to].push({ from: "you", msg: App.msg, stats: 0 })
+    App.pending.push(data)
+    
+    socket.emit("chat", data, () => {
+      App.pending.shift()
+      App.chats[data.to][data.id].stats = 1
+      
+      dbset("chats", App.chats)
+      
+      m.redraw()
+    })
+
+    App.msg = ""
   },
+  popups: () => {
+    if(App.contact == "") return
+    
+    App.popup = App.popup ? false : true
+  
+    dbget("chats").then(val => {
+      if(val) App.chats = val
+      m.redraw()
+    })
+  },
+  mapping: () => {
+    if(!App.chats[App.contact]) return []
+    return App.chats[App.contact].map(x => {
+      if(!x.stats && x.stats !== 0) return m("p", [x.from, ": ", x.msg])
+      return m("p", [x.from, ": ", x.msg, m("b", "("+x.stats+")")])
+    })
+  },
+  logout: () => {
+    localStorage.removeItem("priv")
+    localStorage.removeItem("pub")
+    m.route.set("/login")
+  },
+  
+  
+  
   oninit: () => {
     if(!localStorage.getItem("priv")) m.route.set("/login")
-
+    
+    dbget("chats").then(val => {
+      if(val) App.chats = val
+    })
+    
     m.request({
       method: "post",
       url: "/api?get-account",
@@ -63,65 +75,61 @@ const Home = {
         m.route.set("/account")
         return
       }
-      else{
-        Home.vm.username = data.username
-        socket.emit("online", data.username, () => "nothing")
-      }
-    })
-
-    dbget("some").then(val => {
-      if(val) Home.vm.chats = val
-      m.redraw()
+      App.username = data.username
+      socket.emit("online", data.username, () => "nothing")
     })
   },
   view: () => m("div", [
     m("div", {}, [
-      m("div.content", Home.vm.mapping())
+      m("div.content", App.mapping())
     ]),
     m("div.ui", [
       m("div.header", [
-        m("button", { onclick: Home.vm.logout }, "Logout"),
-        m("button.change", { onclick: Home.vm.popups }, "New"),
+        m("button", { onclick: App.logout }, "Logout"),
+        m("button.change", { onclick: App.popups }, "New"),
         m("button", { onclick: () => clear() }, "Clear"),
-        m("div.persons", { id: Home.vm.popup?"show":"hide" } , [
+        m("div.persons", { id: App.popup?"show":"hide" } , [
           m("input.contact", {
             type: "text",
-            value: Home.vm.contact,
-            oninput: e => Home.vm.contact = e.target.value,
+            value: App.contact,
+            oninput: e => App.contact = e.target.value,
             placeholder: "New Contact"
+          }), Object.keys(App.chats).map(x => {
+            return m("button", {
+              onclick: () => App.contact = x
+            }, x)
           })
         ])
       ]),
       m("div.navbar", [
         m("textarea.text-chat", {
-          value: Home.vm.msg,
-          oninput: e => Home.vm.msg = e.target.value
+          value: App.msg,
+          oninput: e => App.msg = e.target.value
         }),
-        m("button.send-chat", { onclick: Home.vm.send }, "send")
+        m("button.send-chat", { onclick: App.send }, "send")
       ])
     ]),
   ])
 }
 
-socket.on("reconnect", () => socket.emit("online", Home.vm.username, () => {
+socket.on("reconnect", () => socket.emit("online", App.username, () => {
     
   if(!pending[0]) return
 
-  Home.vm.pending.forEach(x => {
+  App.pending.forEach(x => {
     socket.emit("chat", x)
   })
-  Home.vm.pending = []
+  App.pending = []
 }))
 
 socket.on("received", data => {
-  console.log(Home.vm.chats)
   if(Array.isArray(data)){
     data.forEach(x => {
-      Home.vm.chats[x].stats = 2
+      App.chats[x.to][x.id].stats = 2
     })
-  }else Home.vm.chats[data].stats = 2
+  }else App.chats[data.to][data.id].stats = 2
 
-  dbset("some", Home.vm.chats)
+  dbset("chats", App.chats)
 
   m.redraw()
 })
@@ -129,21 +137,23 @@ socket.on("received", data => {
 socket.on("chat", (data, callback) => {
   if(Array.isArray(data)){
     data.forEach(x => {
-      if(x.from == Home.vm.username) return
-      Home.vm.chats.push({
+      if(x.from == App.username) return
+      if(!Array.isArray(App.chats[x.from])) App.chats[x.from] = []
+      App.chats[x.from].push({
         from: x.from,
         msg: x.msg
       })
     })
   }else{
-    if(data.from == Home.vm.username) return
-    Home.vm.chats.push({ from: data.from, msg: data.msg })
+    if(data.from == App.username) return
+    if(!Array.isArray(App.chats[data.from])) App.chats[data.from] = []
+    App.chats[data.from].push({ from: data.from, msg: data.msg })
   }
   callback()
   
-  dbset("some", Home.vm.chats)
+  dbset("chats", App.chats)
   
   m.redraw()
 })
 
-export default Home
+export default App
