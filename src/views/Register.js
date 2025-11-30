@@ -1,6 +1,8 @@
 import m from "../lib/mithril.min.js"
-import { downloadImg } from "../lib/passcolor.js"
+import { downloadImg, getPasscolor } from "../lib/passcolor.js"
 import { ec as EC } from  "../lib/elliptic.min.js"
+
+const ec = EC('secp256k1')
 
 const Register = {
   warn: "",
